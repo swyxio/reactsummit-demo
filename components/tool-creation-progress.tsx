@@ -6,6 +6,7 @@ import {
   ClockIcon,
   CodeIcon,
   FileTextIcon,
+  RefreshCwIcon,
   WrenchIcon,
   XCircleIcon,
 } from "lucide-react";
@@ -18,6 +19,7 @@ type ToolCreationProgressProps = {
     status: "pending" | "in-progress" | "completed" | "error";
     detail?: string;
   };
+  onRetry?: (step: string) => void;
 };
 
 const getIcon = (step: string) => {
@@ -83,7 +85,25 @@ const getStatusBadge = (status: string) => {
   );
 };
 
-export function ToolCreationProgress({ progress }: ToolCreationProgressProps) {
+export function ToolCreationProgress({
+  progress,
+  onRetry,
+}: ToolCreationProgressProps) {
+  console.log(
+    "[ToolCreationProgress] Rendering step:",
+    progress.step,
+    "with status:",
+    progress.status
+  );
+
+  const handleRetryClick = () => {
+    console.log(
+      "[ToolCreationProgress] Retry button clicked for:",
+      progress.step
+    );
+    onRetry?.(progress.step);
+  };
+
   return (
     <div className="my-2 rounded-lg border bg-muted/50 p-4">
       <div className="flex items-center justify-between gap-3">
@@ -98,7 +118,22 @@ export function ToolCreationProgress({ progress }: ToolCreationProgressProps) {
             )}
           </div>
         </div>
-        <div className="shrink-0">{getStatusBadge(progress.status)}</div>
+        <div className="flex shrink-0 items-center gap-2">
+          {progress.status === "pending" && onRetry && (
+            <button
+              className="rounded-md border border-muted-foreground/20 bg-background px-3 py-1 text-xs transition-colors hover:border-muted-foreground/40 hover:bg-muted"
+              onClick={handleRetryClick}
+              title="Retry this step"
+              type="button"
+            >
+              <div className="flex items-center gap-1">
+                <RefreshCwIcon className="size-3" />
+                <span>Retry</span>
+              </div>
+            </button>
+          )}
+          {getStatusBadge(progress.status)}
+        </div>
       </div>
     </div>
   );

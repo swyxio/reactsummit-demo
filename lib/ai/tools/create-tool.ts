@@ -22,14 +22,25 @@ export const createTool = ({ dataStream }: CreateToolProps) =>
         ),
     }),
     execute: async ({ description }) => {
+      console.log(
+        "[createTool] Starting tool creation with description:",
+        description
+      );
+
       // Only allow in development
       if (!isDevelopmentEnvironment) {
+        console.error(
+          "[createTool] Attempted tool creation outside development mode"
+        );
         return {
           error: "Tool creation is only available in development mode",
         };
       }
 
+      console.log("[createTool] Development mode confirmed, proceeding...");
+
       // Step 1: Generate plan
+      console.log("[createTool] Step 1: Starting planning phase");
       dataStream.write({
         type: "data-toolCreationProgress",
         data: {
@@ -41,6 +52,7 @@ export const createTool = ({ dataStream }: CreateToolProps) =>
       });
 
       // Generate tool metadata and implementation plan
+      console.log("[createTool] Requesting tool metadata from AI model");
       const toolMetadataStream = streamObject({
         model: myProvider.languageModel("artifact-model"),
         system: `You are an expert at designing AI tools. Given a description, create a detailed plan for implementing the tool.
@@ -98,18 +110,85 @@ Consider:
         }),
       });
 
-      // Stream the plan as it's being generated
+      // Stream the plan as it's being generated, with early feedback
       let lastPlanLength = 0;
+      let hasShownToolName = false;
+      let hasShownInputSchema = false;
+      let hasShownOutputSchema = false;
+      const allPlanSteps: string[] = [];
+
+      console.log("[createTool] Streaming tool metadata from AI...");
       for await (const partialObject of toolMetadataStream.partialObjectStream) {
+        // Show tool name as soon as it's available
+        if (partialObject.toolName && !hasShownToolName) {
+          console.log(
+            "[createTool] Tool name received:",
+            partialObject.toolName
+          );
+          dataStream.write({
+            type: "data-toolCreationProgress",
+            data: {
+              step: "Defining tool structure",
+              status: "in-progress",
+              detail: `Tool name: ${partialObject.toolName}`,
+            },
+            transient: true,
+          });
+          hasShownToolName = true;
+        }
+
+        // Show input schema progress
+        if (partialObject.inputSchema?.fields && !hasShownInputSchema) {
+          console.log(
+            "[createTool] Input schema received:",
+            partialObject.inputSchema.fields.length,
+            "fields"
+          );
+          dataStream.write({
+            type: "data-toolCreationProgress",
+            data: {
+              step: "Defining input parameters",
+              status: "in-progress",
+              detail: `${partialObject.inputSchema.fields.length} parameter(s) defined`,
+            },
+            transient: true,
+          });
+          hasShownInputSchema = true;
+        }
+
+        // Show output schema progress
+        if (partialObject.outputSchema?.fields && !hasShownOutputSchema) {
+          console.log(
+            "[createTool] Output schema received:",
+            partialObject.outputSchema.fields.length,
+            "fields"
+          );
+          dataStream.write({
+            type: "data-toolCreationProgress",
+            data: {
+              step: "Defining output structure",
+              status: "in-progress",
+              detail: `${partialObject.outputSchema.fields.length} field(s) defined`,
+            },
+            transient: true,
+          });
+          hasShownOutputSchema = true;
+        }
+
+        // Stream implementation plan steps as they're generated
         if (
           partialObject.implementationPlan &&
           partialObject.implementationPlan.length > lastPlanLength
         ) {
-          // New plan steps have been generated
           const newSteps =
             partialObject.implementationPlan.slice(lastPlanLength);
           for (const planStep of newSteps) {
             if (planStep?.step) {
+              console.log(
+                "[createTool] Implementation plan step added:",
+                planStep.step
+              );
+              allPlanSteps.push(planStep.step);
               dataStream.write({
                 type: "data-toolCreationProgress",
                 data: {
@@ -126,8 +205,79 @@ Consider:
       }
 
       const toolMetadata = await toolMetadataStream.object;
+      console.log("[createTool] Tool metadata complete:", {
+        toolName: toolMetadata.toolName,
+        displayName: toolMetadata.displayName,
+        implementationPlanSteps: toolMetadata.implementationPlan.length,
+      });
+
+      // Mark intermediate steps as completed
+      if (hasShownToolName) {
+        dataStream.write({
+          type: "data-toolCreationProgress",
+          data: {
+            step: "Defining tool structure",
+            status: "completed",
+            detail: `Tool: ${toolMetadata.displayName}`,
+          },
+          transient: true,
+        });
+      }
+
+      if (hasShownInputSchema) {
+        dataStream.write({
+          type: "data-toolCreationProgress",
+          data: {
+            step: "Defining input parameters",
+            status: "completed",
+          },
+          transient: true,
+        });
+      }
+
+      if (hasShownOutputSchema) {
+        dataStream.write({
+          type: "data-toolCreationProgress",
+          data: {
+            step: "Defining output structure",
+            status: "completed",
+          },
+          transient: true,
+        });
+      }
+
+      // Mark planning as completed
+      console.log("[createTool] Planning phase completed");
+      dataStream.write({
+        type: "data-toolCreationProgress",
+        data: {
+          step: "Planning",
+          status: "completed",
+          detail: `Ready to implement ${toolMetadata.displayName}`,
+        },
+        transient: true,
+      });
+
+      // Mark all implementation plan steps as completed since they're just planning steps
+      console.log(
+        "[createTool] Marking",
+        allPlanSteps.length,
+        "implementation plan steps as completed"
+      );
+      for (const planStep of allPlanSteps) {
+        console.log("[createTool] Completing plan step:", planStep);
+        dataStream.write({
+          type: "data-toolCreationProgress",
+          data: {
+            step: planStep,
+            status: "completed",
+          },
+          transient: true,
+        });
+      }
 
       // Add remaining execution steps to the plan
+      console.log("[createTool] Setting up execution steps");
       const executionSteps = [
         { step: "Generate tool implementation", status: "pending" as const },
         { step: "Generate UI component", status: "pending" as const },
@@ -148,17 +298,8 @@ Consider:
         });
       }
 
-      dataStream.write({
-        type: "data-toolCreationProgress",
-        data: {
-          step: "Planning",
-          status: "completed",
-          detail: `Tool: ${toolMetadata.displayName}`,
-        },
-        transient: true,
-      });
-
       // Step 2: Generate tool implementation
+      console.log("[createTool] Step 2: Generating tool implementation");
       dataStream.write({
         type: "data-toolCreationProgress",
         data: {
@@ -195,7 +336,14 @@ Output fields: ${JSON.stringify(toolMetadata.outputSchema.fields)}`,
         }),
       });
 
+      console.log(
+        "[createTool] Waiting for tool implementation to complete..."
+      );
       const toolImplementation = await toolImplementationStream.object;
+      console.log("[createTool] Tool implementation received:", {
+        codeLength: toolImplementation.code.length,
+        importsCount: toolImplementation.imports.length,
+      });
 
       dataStream.write({
         type: "data-toolCreationProgress",
@@ -207,6 +355,7 @@ Output fields: ${JSON.stringify(toolMetadata.outputSchema.fields)}`,
       });
 
       // Step 3: Generate UI component
+      console.log("[createTool] Step 3: Generating UI component");
       dataStream.write({
         type: "data-toolCreationProgress",
         data: {
@@ -248,8 +397,15 @@ Make it beautiful, modern, and user-friendly.`,
         }),
       });
 
+      console.log(
+        "[createTool] Waiting for component implementation to complete..."
+      );
       const componentImplementation =
         await componentImplementationStream.object;
+      console.log("[createTool] Component implementation received:", {
+        componentName: componentImplementation.componentName,
+        codeLength: componentImplementation.code.length,
+      });
 
       dataStream.write({
         type: "data-toolCreationProgress",
@@ -261,6 +417,7 @@ Make it beautiful, modern, and user-friendly.`,
       });
 
       // Step 4: Write files
+      console.log("[createTool] Step 4: Writing tool file");
       dataStream.write({
         type: "data-toolCreationProgress",
         data: {
@@ -278,7 +435,9 @@ Make it beautiful, modern, and user-friendly.`,
         `${toolMetadata.toolName}.ts`
       );
 
+      console.log("[createTool] Writing tool file to:", toolFilePath);
       await writeFile(toolFilePath, toolImplementation.code, "utf-8");
+      console.log("[createTool] Tool file written successfully");
 
       dataStream.write({
         type: "data-toolCreationProgress",
@@ -290,6 +449,7 @@ Make it beautiful, modern, and user-friendly.`,
         transient: true,
       });
 
+      console.log("[createTool] Writing component file");
       dataStream.write({
         type: "data-toolCreationProgress",
         data: {
@@ -305,7 +465,9 @@ Make it beautiful, modern, and user-friendly.`,
         `${toolMetadata.toolName}.tsx`
       );
 
+      console.log("[createTool] Writing component file to:", componentFilePath);
       await writeFile(componentFilePath, componentImplementation.code, "utf-8");
+      console.log("[createTool] Component file written successfully");
 
       dataStream.write({
         type: "data-toolCreationProgress",
@@ -318,6 +480,7 @@ Make it beautiful, modern, and user-friendly.`,
       });
 
       // Step 5: Generate integration instructions
+      console.log("[createTool] Step 5: Generating integration instructions");
       dataStream.write({
         type: "data-toolCreationProgress",
         data: {
@@ -432,7 +595,7 @@ Try asking the AI: "${description}"
         transient: true,
       });
 
-      return {
+      const result = {
         toolName: toolMetadata.toolName,
         displayName: toolMetadata.displayName,
         filesCreated: [
@@ -442,5 +605,8 @@ Try asking the AI: "${description}"
         integrationInstructions,
         success: true,
       };
+
+      console.log("[createTool] Tool creation completed successfully:", result);
+      return result;
     },
   });

@@ -91,6 +91,11 @@ function PureMessages({
             />
           ))}
 
+          {/* Show loading indicator when waiting for first AI response */}
+          {status === "streaming" &&
+            messages.length > 0 &&
+            messages.at(-1)?.role === "user" && <ThinkingMessage />}
+
           <AnimatePresence mode="wait">
             {status === "submitted" && <ThinkingMessage key="thinking" />}
           </AnimatePresence>

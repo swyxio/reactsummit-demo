@@ -3,7 +3,7 @@ import {
   convertToModelMessages,
   createUIMessageStream,
   JsonToSseTransformStream,
-  smoothStream,
+  // smoothStream,
   stepCountIs,
   streamText,
 } from "ai";
@@ -210,7 +210,8 @@ export async function POST(request: Request) {
                     "updateDocument",
                     "requestSuggestions",
                   ] as const),
-          experimental_transform: smoothStream({ chunking: "word" }),
+          // Disable smoothing for fastest first-token response
+          // experimental_transform: smoothStream({ chunking: "line" }),
           tools: {
             getWeather,
             createDocument: createDocument({ session, dataStream }),
