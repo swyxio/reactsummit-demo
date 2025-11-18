@@ -41,16 +41,21 @@ const getIcon = (step: string) => {
 
 const getStatusIcon = (status: string) => {
   switch (status) {
-    case "pending":
+    case "pending": {
       return <CircleIcon className="size-4 text-muted-foreground" />;
-    case "in-progress":
+    }
+    case "in-progress": {
       return <ClockIcon className="size-4 animate-pulse text-blue-600" />;
-    case "completed":
+    }
+    case "completed": {
       return <CheckCircleIcon className="size-4 text-green-600" />;
-    case "error":
+    }
+    case "error": {
       return <XCircleIcon className="size-4 text-red-600" />;
-    default:
+    }
+    default: {
       return <CircleIcon className="size-4" />;
+    }
   }
 };
 

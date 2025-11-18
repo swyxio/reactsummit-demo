@@ -37,14 +37,14 @@ export const CodeBlock = ({
   <CodeBlockContext.Provider value={{ code }}>
     <div
       className={cn(
-        "relative w-full overflow-hidden rounded-md border bg-background text-foreground",
+        "relative w-full rounded-md border bg-background text-foreground",
         className
       )}
       {...props}
     >
       <div className="relative">
         <SyntaxHighlighter
-          className="overflow-hidden dark:hidden"
+          className="dark:hidden"
           codeTagProps={{
             className: "font-mono text-sm",
           }}
@@ -54,9 +54,8 @@ export const CodeBlock = ({
             fontSize: "0.875rem",
             background: "hsl(var(--background))",
             color: "hsl(var(--foreground))",
-            overflowX: "auto",
-            overflowWrap: "break-word",
-            wordBreak: "break-all",
+            overflow: "visible",
+            maxWidth: "100%",
           }}
           language={language}
           lineNumberStyle={{
@@ -66,11 +65,12 @@ export const CodeBlock = ({
           }}
           showLineNumbers={showLineNumbers}
           style={oneLight}
+          wrapLongLines={true}
         >
           {code}
         </SyntaxHighlighter>
         <SyntaxHighlighter
-          className="hidden overflow-hidden dark:block"
+          className="hidden dark:block"
           codeTagProps={{
             className: "font-mono text-sm",
           }}
@@ -80,9 +80,8 @@ export const CodeBlock = ({
             fontSize: "0.875rem",
             background: "hsl(var(--background))",
             color: "hsl(var(--foreground))",
-            overflowX: "auto",
-            overflowWrap: "break-word",
-            wordBreak: "break-all",
+            overflow: "visible",
+            maxWidth: "100%",
           }}
           language={language}
           lineNumberStyle={{
@@ -92,6 +91,7 @@ export const CodeBlock = ({
           }}
           showLineNumbers={showLineNumbers}
           style={oneDark}
+          wrapLongLines={true}
         >
           {code}
         </SyntaxHighlighter>

@@ -98,9 +98,37 @@ Consider:
         }),
       });
 
+      // Stream the plan as it's being generated
+      let lastPlanLength = 0;
+      for await (const partialObject of toolMetadataStream.partialObjectStream) {
+        if (
+          partialObject.implementationPlan &&
+          partialObject.implementationPlan.length > lastPlanLength
+        ) {
+          // New plan steps have been generated
+          const newSteps =
+            partialObject.implementationPlan.slice(lastPlanLength);
+          for (const planStep of newSteps) {
+            if (planStep?.step) {
+              dataStream.write({
+                type: "data-toolCreationProgress",
+                data: {
+                  step: planStep.step,
+                  status: "pending",
+                  detail: planStep.description,
+                },
+                transient: true,
+              });
+            }
+          }
+          lastPlanLength = partialObject.implementationPlan.length;
+        }
+      }
+
       const toolMetadata = await toolMetadataStream.object;
 
-      const plan = [
+      // Add remaining execution steps to the plan
+      const executionSteps = [
         { step: "Generate tool implementation", status: "pending" as const },
         { step: "Generate UI component", status: "pending" as const },
         { step: "Write tool file", status: "pending" as const },
@@ -111,8 +139,8 @@ Consider:
         },
       ];
 
-      // Send initial plan
-      for (const item of plan) {
+      // Send execution plan steps
+      for (const item of executionSteps) {
         dataStream.write({
           type: "data-toolCreationProgress",
           data: { step: item.step, status: item.status },
