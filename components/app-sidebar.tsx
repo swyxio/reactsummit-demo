@@ -40,6 +40,8 @@ export function AppSidebar({ user }: { user: User | undefined }) {
   const { setOpenMobile } = useSidebar();
   const { mutate } = useSWRConfig();
   const [showDeleteAllDialog, setShowDeleteAllDialog] = useState(false);
+  const [isChatHistoryExpanded, setIsChatHistoryExpanded] = useState(true);
+  const [isAINewsExpanded, setIsAINewsExpanded] = useState(true);
 
   const handleDeleteAll = () => {
     const deletePromise = fetch("/api/history", {
@@ -117,11 +119,63 @@ export function AppSidebar({ user }: { user: User | undefined }) {
           </SidebarMenu>
         </SidebarHeader>
         <SidebarContent className="flex flex-col">
-          <div className="flex-1 overflow-y-auto">
-            <SidebarHistory user={user} />
+          <div
+            className={`${isChatHistoryExpanded ? "flex-1" : "flex-none"} flex flex-col overflow-hidden border-b`}
+          >
+            <button
+              className="flex items-center justify-between px-4 py-2 transition-colors hover:bg-muted/50"
+              onClick={() => setIsChatHistoryExpanded(!isChatHistoryExpanded)}
+              type="button"
+            >
+              <span className="font-medium text-sm">Chat History</span>
+              <svg
+                className={`h-4 w-4 transition-transform ${isChatHistoryExpanded ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M19 9l-7 7-7-7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                />
+              </svg>
+            </button>
+            {isChatHistoryExpanded && (
+              <div className="flex-1 overflow-y-auto">
+                <SidebarHistory user={user} />
+              </div>
+            )}
           </div>
-          <div className="flex-1 overflow-y-auto border-t">
-            <SidebarAINews />
+          <div
+            className={`${isAINewsExpanded ? "flex-1" : "flex-none"} flex flex-col overflow-hidden`}
+          >
+            <button
+              className="flex items-center justify-between px-4 py-2 transition-colors hover:bg-muted/50"
+              onClick={() => setIsAINewsExpanded(!isAINewsExpanded)}
+              type="button"
+            >
+              <span className="font-medium text-sm">AI News</span>
+              <svg
+                className={`h-4 w-4 transition-transform ${isAINewsExpanded ? "rotate-180" : ""}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  d="M19 9l-7 7-7-7"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                />
+              </svg>
+            </button>
+            {isAINewsExpanded && (
+              <div className="flex-1 overflow-y-auto">
+                <SidebarAINews />
+              </div>
+            )}
           </div>
         </SidebarContent>
         <SidebarFooter>{user && <SidebarUserNav user={user} />}</SidebarFooter>
