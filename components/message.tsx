@@ -23,6 +23,8 @@ import { MessageActions } from "./message-actions";
 import { MessageEditor } from "./message-editor";
 import { MessageReasoning } from "./message-reasoning";
 import { PreviewAttachment } from "./preview-attachment";
+import { ToolCreationResult } from "./tool-creation-progress";
+import { ToolCreationStream } from "./tool-creation-stream";
 import { Weather } from "./weather";
 
 const PurePreviewMessage = ({
@@ -260,6 +262,35 @@ const PurePreviewMessage = ({
                             />
                           )
                         }
+                      />
+                    )}
+                  </ToolContent>
+                </Tool>
+              );
+            }
+
+            if (type === "tool-createTool") {
+              const { toolCallId, state } = part;
+
+              return (
+                <Tool defaultOpen={true} key={toolCallId}>
+                  <ToolHeader state={state} type="tool-createTool" />
+                  <ToolContent>
+                    {state === "input-available" && (
+                      <>
+                        <ToolInput input={part.input} />
+                        <div className="px-4 pb-4">
+                          <div className="mb-2 font-medium text-sm">
+                            Progress:
+                          </div>
+                          <ToolCreationStream />
+                        </div>
+                      </>
+                    )}
+                    {state === "output-available" && (
+                      <ToolOutput
+                        errorText={undefined}
+                        output={<ToolCreationResult result={part.output} />}
                       />
                     )}
                   </ToolContent>

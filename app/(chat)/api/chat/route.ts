@@ -23,10 +23,14 @@ import type { ChatModel } from "@/lib/ai/models";
 import { type RequestHints, systemPrompt } from "@/lib/ai/prompts";
 import { myProvider } from "@/lib/ai/providers";
 import { createDocument } from "@/lib/ai/tools/create-document";
+import { createTool } from "@/lib/ai/tools/create-tool";
 import { getWeather } from "@/lib/ai/tools/get-weather";
 import { requestSuggestions } from "@/lib/ai/tools/request-suggestions";
 import { updateDocument } from "@/lib/ai/tools/update-document";
-import { isProductionEnvironment } from "@/lib/constants";
+import {
+  isDevelopmentEnvironment,
+  isProductionEnvironment,
+} from "@/lib/constants";
 import {
   createStreamId,
   deleteChatById,
@@ -192,12 +196,20 @@ export async function POST(request: Request) {
           experimental_activeTools:
             selectedChatModel === "chat-model-reasoning"
               ? []
-              : [
-                  "getWeather",
-                  "createDocument",
-                  "updateDocument",
-                  "requestSuggestions",
-                ],
+              : isDevelopmentEnvironment
+                ? ([
+                    "getWeather",
+                    "createDocument",
+                    "updateDocument",
+                    "requestSuggestions",
+                    "createTool",
+                  ] as const)
+                : ([
+                    "getWeather",
+                    "createDocument",
+                    "updateDocument",
+                    "requestSuggestions",
+                  ] as const),
           experimental_transform: smoothStream({ chunking: "word" }),
           tools: {
             getWeather,
@@ -207,6 +219,9 @@ export async function POST(request: Request) {
               session,
               dataStream,
             }),
+            ...(isDevelopmentEnvironment
+              ? { createTool: createTool({ dataStream }) }
+              : {}),
           },
           experimental_telemetry: {
             isEnabled: isProductionEnvironment,
