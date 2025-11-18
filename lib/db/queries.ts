@@ -38,9 +38,15 @@ import { generateHashedPassword } from "./utils";
 // use the Drizzle adapter for Auth.js / NextAuth
 // https://authjs.dev/reference/adapter/drizzle
 
+if (!process.env.POSTGRES_URL) {
+  throw new Error("POSTGRES_URL environment variable is not set");
+}
+
+console.log("Initializing database connection...");
 // biome-ignore lint: Forbidden non-null assertion.
 const client = postgres(process.env.POSTGRES_URL!);
 const db = drizzle(client);
+console.log("Database connection initialized");
 
 export async function getUser(email: string): Promise<User[]> {
   try {
@@ -68,11 +74,17 @@ export async function createGuestUser() {
   const password = generateHashedPassword(generateUUID());
 
   try {
-    return await db.insert(user).values({ email, password }).returning({
+    console.log("Creating guest user with email:", email);
+    console.log("Password length:", password.length);
+    const result = await db.insert(user).values({ email, password }).returning({
       id: user.id,
       email: user.email,
     });
-  } catch (_error) {
+    console.log("Guest user created successfully:", result);
+    return result;
+  } catch (error) {
+    console.error("Database error in createGuestUser:", error);
+    console.error("Error details:", JSON.stringify(error, null, 2));
     throw new ChatSDKError(
       "bad_request:database",
       "Failed to create guest user"
@@ -134,7 +146,7 @@ export async function deleteAllChatsByUserId({ userId }: { userId: string }) {
       return { deletedCount: 0 };
     }
 
-    const chatIds = userChats.map(c => c.id);
+    const chatIds = userChats.map((c) => c.id);
 
     await db.delete(vote).where(inArray(vote.chatId, chatIds));
     await db.delete(message).where(inArray(message.chatId, chatIds));

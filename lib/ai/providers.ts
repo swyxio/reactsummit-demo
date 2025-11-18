@@ -1,4 +1,5 @@
-import { gateway } from "@ai-sdk/gateway";
+import { cerebras } from "@ai-sdk/cerebras";
+import { openai } from "@ai-sdk/openai";
 import {
   customProvider,
   extractReasoningMiddleware,
@@ -13,11 +14,13 @@ export const myProvider = isTestEnvironment
         chatModel,
         reasoningModel,
         titleModel,
+        gpt5Model,
       } = require("./models.mock");
       return customProvider({
         languageModels: {
           "chat-model": chatModel,
           "chat-model-reasoning": reasoningModel,
+          "chat-model-gpt5": gpt5Model,
           "title-model": titleModel,
           "artifact-model": artifactModel,
         },
@@ -25,12 +28,13 @@ export const myProvider = isTestEnvironment
     })()
   : customProvider({
       languageModels: {
-        "chat-model": gateway.languageModel("xai/grok-2-vision-1212"),
+        "chat-model": cerebras("zai-glm-4.6"),
         "chat-model-reasoning": wrapLanguageModel({
-          model: gateway.languageModel("xai/grok-3-mini"),
+          model: cerebras("zai-glm-4.6"),
           middleware: extractReasoningMiddleware({ tagName: "think" }),
         }),
-        "title-model": gateway.languageModel("xai/grok-2-1212"),
-        "artifact-model": gateway.languageModel("xai/grok-2-1212"),
+        "chat-model-gpt5": openai("gpt-5"),
+        "title-model": cerebras("zai-glm-4.6"),
+        "artifact-model": cerebras("zai-glm-4.6"),
       },
     });
