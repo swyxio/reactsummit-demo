@@ -91,7 +91,12 @@ export async function POST(request: Request) {
   try {
     const json = await request.json();
     requestBody = postRequestBodySchema.parse(json);
-  } catch (_) {
+  } catch (error) {
+    console.error("Chat API: Request body validation failed", {
+      error,
+      errorMessage: error instanceof Error ? error.message : String(error),
+      vercelId: request.headers.get("x-vercel-id"),
+    });
     return new ChatSDKError("bad_request:api").toResponse();
   }
 
